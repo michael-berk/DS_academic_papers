@@ -1,4 +1,5 @@
 # Description: comparison between FB Prophet and NeuralProphet
+# Post: https://towardsdatascience.com/prophet-vs-neuralprophet-fc717ab7a9d8
 # Author: Michael Berk
 # Date created: 2022-12-08
 

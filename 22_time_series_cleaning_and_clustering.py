@@ -1,4 +1,5 @@
 # Description: time series clustering and cleaning based on paper21
+# Post: https://towardsdatascience.com/how-to-improve-deep-learning-forecasts-for-time-series-part-2-c11efc8dfee2
 # Author: Michael Berk
 # Date created: 2021-10-22
 
