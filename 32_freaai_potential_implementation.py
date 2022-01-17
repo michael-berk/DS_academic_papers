@@ -18,8 +18,10 @@ from matplotlib import pyplot as plt
 
 # DT
 import graphviz
+from dtreeviz.trees import dtreeviz
 from sklearn.tree import DecisionTreeClassifier, export_graphviz, _tree
-from sklearn.metrics import accuracy_score
+import itertools
+
 
 #########################
 # Step 1: load data and train XGBoost model
@@ -242,7 +244,7 @@ def hpd_example(show_plot=False):
 
     if show_plot: plt.show()
 
-def hpd_iterative_search(col, accuracy, start_percent=0.5, end_percent=0.98, increment=0.05):
+def hpd_iterative_search(col, accuracy, start_percent=0.5, end_percent=0.98, increment=0.05, acc_cutoff=0.01):
     """
 
     :param col: (pd.Series) univariate numeric col to search through
@@ -250,6 +252,7 @@ def hpd_iterative_search(col, accuracy, start_percent=0.5, end_percent=0.98, inc
     :param start_percent: (flaot) percent to start with
     :param end_percent: (flaot) percent to end with
     :param increment: (float) value to increment by
+    :param acc_cutoff: (float) accuracy cutoff to return data
     :return: (2d arry) of indices of problematic areas
     """
 
@@ -272,7 +275,7 @@ def hpd_iterative_search(col, accuracy, start_percent=0.5, end_percent=0.98, inc
             acc = np.mean(accuracy.iloc[indices])
 
             # determine if there is a "meaningful" change - this is done with a stat sig cal
-            if prior_acc is not None and acc - prior_acc > 0.01:
+            if prior_acc is not None and acc - prior_acc > acc_cutoff:
                 out[f'{p}-{prior_p}'] = (prior_indices - set(indices), acc - prior_acc, prior_acc)
 
             # reset
@@ -283,57 +286,13 @@ def hpd_iterative_search(col, accuracy, start_percent=0.5, end_percent=0.98, inc
     return out 
 
     
-###################### Run Helpers #############
-
-def run_data_search(df):
-    """ Iterate over data columns and perform the following actions...
-    1. If type(col) is numeric, run HDP
-    TODO 2. If type(col) is non-numeric, run DT
-    TODO 3. Run DT for all interactions
-
-    :param df: (pd.DataFrame) of raw data with correct/incorrect classification
-    """
-
-    categoricals  = [x for x in list(df) if 'color' in x or 'gender' in x]
-
-    # univariate loop
-    for col_name in list(df):
-        c = df[col_name]
-
-        # numerics 
-        if col_name not in categoricals and 'accuracy' not in col_name:
-            print(col_name)
-            print(hpd_iterative_search(c, df['accuracy_bool']))
-
-
-
-
-
-###################
-# Run
-###################
-# Step 1: train our baseline model 
-df = read_data()
-df_test = train_baseline_model(df) # add preds to df
-
-# Step 2: find areas of weakness
-# NOTE THAT WE ONLY HAVE HDP IMPLEMENTED RIGHT NOW 
-# I COULDN'T FINISH IN TIME, SO DECISION TREES COMING NEXT WEEK
-
-#hpd_example(show_plot=False)
-run_data_search(df_test)
-
-#model, preds, acc, tree, X = fit_DT(df_test)
-#sklearn_path(model, X)
-#visualize_DT(df_test, model)
-#print(return_dt_split(model, df_test['age']))
-
 
 ###################### Decision Tree #############
 ######### THIS IS INCOMPLETE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #####################
 # Src: https://towardsdatascience.com/train-a-regression-model-using-a-decision-tree-70012c22bcc1
 # Src: https://towardsdatascience.com/an-exhaustive-guide-to-classification-using-decision-trees-8d472e77223f
 def fit_DT(df, predictors = ['age']):
+    """ Fit a classification decision tree and return key elements """
 
     X = df[predictors] 
     y = df['accuracy_bool'] 
@@ -347,95 +306,136 @@ def fit_DT(df, predictors = ['age']):
 
     return model, preds, acc, tree_structure, X
 
-def visualize_DT(df, model, feature_names=['age']):
-    data = export_graphviz(model, feature_names=feature_names,
-                           filled=True, rounded=True)
+def visualize_DT_1(df, model, predictors=['age'], fname='tree'):
+    """ Visualize and export DT model """
+    data = export_graphviz(model, feature_names=predictors,
+                           filled=True, rounded=True, node_ids=True)
 
     graph = graphviz.Source(data)
-    graph.render("tree")
+    graph.render('trees/'+fname)
 
-def return_dt_split(model, col, impurity_cutoff=0.4, n_datapoints_cutoff=5):
+def visualize_DT_2(df, model, predictors=['age'], fname='tree'):
+    """ Visualize tree with data plots """
+    X = df[predictors]
+    acc = df['accuracy_bool'].values
+    viz = dtreeviz(model, X, acc,
+                    target_name="accuracy_bool",
+                    feature_names=predictors,
+                    class_names=['True','False'] if acc[0] else ['False','True'])
+
+    viz.save('trees/'+fname+'.svg')
+
+def return_dt_split(model, col, accuracy, col_2=None, impurity_cutoff=0.4, n_datapoints_cutoff=5, acc_cutoff=0.03):
     """
     Return all indices of col that meet the following criteria:
-    1. Leaf has impurity <= cutoff
-    2. Leaf majority has incorrect classifications
-    3. Split size > n_datapoints_cutoff 
+    1. Leaf has accuracy lower that baseline by acc_cutoff
+    2. Split size > n_datapoints_cutoff 
 
     :param model: SKLearn classification decision tree model
     :param col: (pd.Series) column used to split on
+    :param accuracy: (pd.Series) column corresponding to correct/incorrect classification
+    :param col_2: (pd.Series) column to be used for interactions
     :param impurity_cutoff: (float) requirement for entropy/gini of leaf
     :param n_datapoints_cutoff: (int) minimum n in a final node to be returned
-    :return: (np.array) of indices of the col that meet the above criteria
+    :param acc_cutoff: (float) accuracy cutoff for returning float
+    :return: (dict[node_idx, indices]) where indices corresponds to the col that meet the above criteria
     """
+
+    # get leaf ids and setup
+    df = pd.concat([col, col_2], axis=1) if col_2 is not None else pd.DataFrame(col)
+    leaf_id = model.apply(df)
 
     t = model.tree_
-    print(t.node_count)
-    print(t.children_left)
-    print(t.children_right)
-    print(t.threshold)
-    print((t.children_left == -1) & (t.children_right == -1))
-    print(t.impurity <= impurity_cutoff)
-    print(t.n_node_samples > n_datapoints_cutoff)
-    # note this won't work on asymmetrical trees
+    baseline_acc = np.mean(accuracy)
 
-    criteria = ( 
-                (t.children_left == -1) & (t.children_right == -1) # leaves only
-                & (t.impurity <= impurity_cutoff) # keep pure nodes
-                & (t.n_node_samples > n_datapoints_cutoff) # enough datapoints to be useful
-    )
-    leaves = t.threshold[criteria]#.reshape(sum(criteria), 2)
-    #print(len(t.children_left))
-    print('HERE')
-    #print(leaves)
+    # get indices of leaf ids that meet criteria
+    keeps = {i for i,v in enumerate(t.n_node_samples) if v > n_datapoints_cutoff} # sample size
 
-    l= model.apply(pd.DataFrame(col))
-    print('LEAVES CLASSIFICATION !!!!!!!!!!!!!')
-    print(l)
-    print(set(l))
-    v, count = np.unique(l, return_counts=True)
-    print(dict(zip(v,count)))
-    print([(x,y) for x,y in zip(np.unique(l, return_counts=True))])
+    # store all data and corresponding index
+    node_indices = {}
+    for idx in keeps:
+        node_indices[idx] = [i for i,v in enumerate(leaf_id) if v == idx]
 
-    indices = []
-    for l in leaves:
-        upper, lower = max(l), min(l)
-        indices.append([i for i, v in enumerate(col) if v <= upper and v >= lower])
-    print(indices)
-    """
-    Options
-    1. Figure out how create all criteria for a decision path and chain it
-    2. Figure out why leaves classification is returning non leaves
-    3. 
+        # remove non-low-accuracy areas and empty lists
+        slice_acc = np.mean(accuracy.iloc[node_indices[idx]])
+        if baseline_acc - slice_acc < acc_cutoff or node_indices[idx] == []:
+            del node_indices[idx]
+
+    return node_indices 
+
+###################
+# Run
+###################
+
+###################### Run Helpers #############
+def run_data_search(df, viz=2):
+    """ Iterate over data columns and perform the following actions...
+    1. If type(col) is numeric, run HDP
+    2. If type(col) is categorical, run DT
+    3. Run DT for interactions
+    Save DT viz and print problematic indices
+
+    :param df: (pd.DataFrame) of raw data with correct/incorrect classification
+    :param viz: (int) 0 if no viz, 1 if viz type 1, 2 if vis type 2
     """
 
-    return indices
+    categoricals  = [x for x in list(df) if 'color' in x or 'gender' in x]
+    acc_col = df['accuracy_bool']
 
-def sklearn_path(model, X_test):
-    n_nodes = model.tree_.node_count
-    children_left = model.tree_.children_left
-    children_right = model.tree_.children_right
-    feature = model.tree_.feature
-    threshold = model.tree_.threshold
+    # univariate loop
+    for col_name in [x for x in list(df) if x != 'accuracy_bool']:
+        c = df[col_name]
 
-    node_depth = np.zeros(shape=n_nodes, dtype=np.int64)
-    is_leaves = np.zeros(shape=n_nodes, dtype=bool)
-    stack = [(0, 0)]  # start with the root node id (0) and its depth (0)
-    while len(stack) > 0:
-        # `pop` ensures each node is only visited once
-        node_id, depth = stack.pop()
-        node_depth[node_id] = depth
+        # numerics 
+        if col_name not in categoricals and 'accuracy' not in col_name:
+            print(f'Running: HDP for {col_name}')
+            print(hpd_iterative_search(c, acc_col))
 
-        # If the left and right child of a node is not the same we have a split
-        # node
-        is_split_node = children_left[node_id] != children_right[node_id]
-        # If a split node, append left and right children and depth to `stack`
-        # so we can loop through them
-        if is_split_node:
-            stack.append((children_left[node_id], depth + 1))
-            stack.append((children_right[node_id], depth + 1))
+        # categoricals
         else:
-            is_leaves[node_id] = True
+            print(f'Running: DT for {col_name}')
+            predictors = [col_name]
+            model, *_, X = fit_DT(df, predictors)
 
+            if viz == 1:
+                visualize_DT_1(df, model, predictors=predictors, fname=f'{col_name}')
+            elif viz == 2:
+                visualize_DT_2(df, model, predictors=predictors, fname=f'{col_name}')
 
-    print(model.decision_path(X_test))
+            print(return_dt_split(model, df['age'], acc_col))
 
+    # bivariate loop (interactions)
+    for col1, col2 in itertools.combinations(list(df), 2):
+        print(f'Running: DT for {col1} and {col2}')
+        predictors = [col1,col2]
+        model, *_, X = fit_DT(df, predictors=predictors)
+
+        if viz == 1:
+            visualize_DT_1(df, model, predictors=predictors, fname=f'{col1}-{col2}')
+        elif viz == 2:
+            visualize_DT_2(df, model, predictors=predictors, fname=f'{col1}-{col2}')
+
+        print(return_dt_split(model, df['age'], acc_col, df['bmi']))
+
+###################### Run #############
+
+# Step 1: train our baseline model 
+df = read_data()
+df_test = train_baseline_model(df) # add preds to df
+
+# Step 2: run HPD Example
+#hpd_example(show_plot=False)
+
+# Step 3: run DT example
+# Step 3.1: univariate
+model, preds, acc, tree, X = fit_DT(df_test)
+print(return_dt_split(model, df_test['age'], df_test['accuracy_bool']))
+
+# Step 3.2: bivariate
+predictors = ['age','bmi']
+model, preds, acc, tree, X = fit_DT(df_test, predictors=predictors)
+visualize_DT_2(df_test, model, predictors=predictors)
+print(return_dt_split(model, df_test['age'], df_test['accuracy_bool'], df_test['bmi']))
+
+# Step 4: find areas of weakness
+run_data_search(df_test)
