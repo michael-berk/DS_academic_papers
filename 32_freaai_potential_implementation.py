@@ -5,6 +5,7 @@
 import pandas as pd
 import numpy as np
 import plotly.express as px
+pd.set_option('display.max_rows', None)
 
 # XGBoost
 from xgboost import XGBClassifier
@@ -205,7 +206,7 @@ def hpd_grid(sample, alpha=0.05, roundto=2, percent=0.5, show_plot=False):
          x_hpd = x[(x > value[0]) & (x < value[1])]
          y_hpd = y[(x > value[0]) & (x < value[1])]
          modes.append(round(x_hpd[np.argmax(y_hpd)], roundto)) # store x-value where density is highest in range
-    return hpd, x, y, modes, y_cutoff, np.array(indices).flatten()
+    return (hpd, x, y, modes, y_cutoff, np.array(indices).flatten())
 
 
 def hpd_example(show_plot=False): 
@@ -244,9 +245,8 @@ def hpd_example(show_plot=False):
 
     if show_plot: plt.show()
 
-def hpd_iterative_search(col, accuracy, start_percent=0.5, end_percent=0.98, increment=0.05, acc_cutoff=0.01):
+def hpd_iterative_search(col, accuracy, start_percent=0.5, end_percent=0.98, increment=0.05, acc_cutoff=-0.005):
     """
-
     :param col: (pd.Series) univariate numeric col to search through
     :param accuracy: (pd.Series) boolean accuracy column
     :param start_percent: (flaot) percent to start with
@@ -256,7 +256,7 @@ def hpd_iterative_search(col, accuracy, start_percent=0.5, end_percent=0.98, inc
     :return: (2d arry) of indices of problematic areas
     """
 
-    out = {}
+    out = [] 
     
     prior_indices = {} 
     prior_acc = None
@@ -275,8 +275,8 @@ def hpd_iterative_search(col, accuracy, start_percent=0.5, end_percent=0.98, inc
             acc = np.mean(accuracy.iloc[indices])
 
             # determine if there is a "meaningful" change - this is done with a stat sig cal
-            if prior_acc is not None and acc - prior_acc > acc_cutoff:
-                out[f'{p}-{prior_p}'] = (prior_indices - set(indices), acc - prior_acc, prior_acc)
+            if prior_acc is not None and acc - prior_acc < acc_cutoff:
+                out.append((f'{col.name}:{p}-{prior_p}', acc - prior_acc, prior_indices - set(indices), acc))
 
             # reset
             prior_indices = set(indices)
@@ -288,7 +288,6 @@ def hpd_iterative_search(col, accuracy, start_percent=0.5, end_percent=0.98, inc
     
 
 ###################### Decision Tree #############
-######### THIS IS INCOMPLETE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #####################
 # Src: https://towardsdatascience.com/train-a-regression-model-using-a-decision-tree-70012c22bcc1
 # Src: https://towardsdatascience.com/an-exhaustive-guide-to-classification-using-decision-trees-8d472e77223f
 def fit_DT(df, predictors = ['age']):
@@ -302,9 +301,8 @@ def fit_DT(df, predictors = ['age']):
 
     preds = model.predict(X)
     acc = accuracy_score(y, preds)
-    tree_structure = model.tree_
 
-    return model, preds, acc, tree_structure, X
+    return model, preds, acc, X
 
 def visualize_DT_1(df, model, predictors=['age'], fname='tree'):
     """ Visualize and export DT model """
@@ -325,7 +323,7 @@ def visualize_DT_2(df, model, predictors=['age'], fname='tree'):
 
     viz.save('trees/'+fname+'.svg')
 
-def return_dt_split(model, col, accuracy, col_2=None, impurity_cutoff=0.4, n_datapoints_cutoff=5, acc_cutoff=0.03):
+def return_dt_split(model, col, accuracy, col_2=None, impurity_cutoff=1.0, n_datapoints_cutoff=5, acc_cutoff=0.03):
     """
     Return all indices of col that meet the following criteria:
     1. Leaf has accuracy lower that baseline by acc_cutoff
@@ -349,26 +347,30 @@ def return_dt_split(model, col, accuracy, col_2=None, impurity_cutoff=0.4, n_dat
     baseline_acc = np.mean(accuracy)
 
     # get indices of leaf ids that meet criteria
-    keeps = {i for i,v in enumerate(t.n_node_samples) if v > n_datapoints_cutoff} # sample size
+    keeps_1 = {i for i,v in enumerate(t.n_node_samples) if v > n_datapoints_cutoff} # sample size
+    keeps_2 = {i for i,v in enumerate(t.impurity) if v <= impurity_cutoff} # sample size
+    keeps = keeps_1 & keeps_2
 
     # store all data and corresponding index
     node_indices = {}
+    slice_acc = -1
     for idx in keeps:
         node_indices[idx] = [i for i,v in enumerate(leaf_id) if v == idx]
 
         # remove non-low-accuracy areas and empty lists
-        slice_acc = np.mean(accuracy.iloc[node_indices[idx]])
+        slice_acc = [x[1] / sum(x) for x in t.value[idx]] 
         if baseline_acc - slice_acc < acc_cutoff or node_indices[idx] == []:
             del node_indices[idx]
+            slice_acc = None
 
-    return node_indices 
+    return (f'{col.name}{"-"+col_2.name if col_2 is not None else ""}', list(node_indices.keys()), list(node_indices.values()), slice_acc)
 
 ###################
 # Run
 ###################
 
 ###################### Run Helpers #############
-def run_data_search(df, viz=2):
+def run_data_search(df, viz=2, do_a=True, do_b=True, do_c=True):
     """ Iterate over data columns and perform the following actions...
     1. If type(col) is numeric, run HDP
     2. If type(col) is categorical, run DT
@@ -382,17 +384,21 @@ def run_data_search(df, viz=2):
     categoricals  = [x for x in list(df) if 'color' in x or 'gender' in x]
     acc_col = df['accuracy_bool']
 
+    # store for output
+    univariate_numerics_acc = []
+    categoricals_acc = []
+    bivariate_acc = []
+
     # univariate loop
     for col_name in [x for x in list(df) if x != 'accuracy_bool']:
         c = df[col_name]
 
-        # numerics 
-        if col_name not in categoricals and 'accuracy' not in col_name:
+        if col_name not in categoricals and col_name not in ('outcome','accuracy_bool') and do_a:
             print(f'Running: HDP for {col_name}')
-            print(hpd_iterative_search(c, acc_col))
+            univariate_numerics_acc.append(hpd_iterative_search(c, acc_col))
 
         # categoricals
-        else:
+        elif do_b:
             print(f'Running: DT for {col_name}')
             predictors = [col_name]
             model, *_, X = fit_DT(df, predictors)
@@ -402,20 +408,61 @@ def run_data_search(df, viz=2):
             elif viz == 2:
                 visualize_DT_2(df, model, predictors=predictors, fname=f'{col_name}')
 
-            print(return_dt_split(model, df['age'], acc_col))
+            categoricals_acc.append(return_dt_split(model, c, acc_col))
 
     # bivariate loop (interactions)
-    for col1, col2 in itertools.combinations(list(df), 2):
-        print(f'Running: DT for {col1} and {col2}')
-        predictors = [col1,col2]
-        model, *_, X = fit_DT(df, predictors=predictors)
+    if do_c:
+        for col1, col2 in itertools.combinations(set(df) - set(['accuracy_bool','outcome']), 2):
+            print(f'Running: DT for {col1} and {col2}')
+            c1, c2 = df[col1], df[col2]
+            predictors = [col1,col2]
+            model, *_, X = fit_DT(df, predictors=predictors)
 
-        if viz == 1:
-            visualize_DT_1(df, model, predictors=predictors, fname=f'{col1}-{col2}')
-        elif viz == 2:
-            visualize_DT_2(df, model, predictors=predictors, fname=f'{col1}-{col2}')
+            if viz == 1:
+                visualize_DT_1(df, model, predictors=predictors, fname=f'{col1}-{col2}')
+            elif viz == 2:
+                visualize_DT_2(df, model, predictors=predictors, fname=f'{col1}-{col2}')
 
-        print(return_dt_split(model, df['age'], acc_col, df['bmi']))
+            bivariate_acc.append(return_dt_split(model, c1, acc_col, c2))
+
+    return (univariate_numerics_acc, categoricals_acc, bivariate_acc)
+
+def clean_output(a, b, c):
+    """ 
+    Take list of outputs of HPD, DT, and DT interactions and return sorted 
+    value by accuracy drop.
+    """
+
+    names, indices, accuracies, method = [], [], [], []
+
+    # Univarite using HPD
+
+    # Save vals 
+    for v in a:
+        for x in v:
+            names.append(x[0])
+            indices.append(x[2])
+            accuracies.append(x[3])
+            method.append('HPD')
+
+    for x in b:
+        names.append(x[0])
+        indices.append(x[2])
+        accuracies.append(x[3])
+        method.append('DT')
+
+    for x in c:
+        names.append(x[0])
+        indices.append(x[2])
+        accuracies.append(x[3])
+        method.append('DT')
+
+    out = pd.DataFrame(dict(names=names, indicies=indices, accuracies=accuracies, method=method))
+    out.sort_values(by=['accuracies'], inplace=True)
+    out.index = range(len(out.index))
+
+    return out
+
 
 ###################### Run #############
 
@@ -428,14 +475,24 @@ df_test = train_baseline_model(df) # add preds to df
 
 # Step 3: run DT example
 # Step 3.1: univariate
-model, preds, acc, tree, X = fit_DT(df_test)
-print(return_dt_split(model, df_test['age'], df_test['accuracy_bool']))
+predictors=['age']
+model, preds, acc, X = fit_DT(df_test, predictors=predictors)
+visualize_DT_1(df_test, model, predictors=predictors, fname=f'bivariate_demo')
+visualize_DT_2(df_test, model, predictors=predictors, fname=f'bivariate_demo')
+x = return_dt_split(model, df_test[predictors[0]], df_test['accuracy_bool'])
+#print(x)
 
 # Step 3.2: bivariate
-predictors = ['age','bmi']
-model, preds, acc, tree, X = fit_DT(df_test, predictors=predictors)
-visualize_DT_2(df_test, model, predictors=predictors)
-print(return_dt_split(model, df_test['age'], df_test['accuracy_bool'], df_test['bmi']))
+predictors = ['glucose','blood_pressure']
+model, preds, acc, X = fit_DT(df_test, predictors=predictors)
+visualize_DT_1(df_test, model, predictors=predictors, fname=f'bivariate_demo')
+visualize_DT_2(df_test, model, predictors=predictors, fname=f'bivariate_demo')
+x = return_dt_split(model, df_test[predictors[0]], df_test['accuracy_bool'], df_test[predictors[1]])
+#print(x)
 
 # Step 4: find areas of weakness
-run_data_search(df_test)
+a, b, c = run_data_search(df_test)
+out = clean_output(a,b,c)
+out.dropna(inplace=True)
+print(out)
+
