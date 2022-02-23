@@ -21,7 +21,7 @@ has_siblings = np.where(np.random.uniform(size=100) > 0.50, 1, 0)
 
 baby_panda_weight = (np.random.normal(size=100) + age + bamboo + has_siblings).flatten()
 
-if not show:
+if show:
     plot_df = pd.DataFrame(dict(age=age, baby_panda_weight=baby_panda_weight))
     px.scatter(plot_df, x='age', y='baby_panda_weight',
                template='plotly_white',
