@@ -1,155 +1,29 @@
-
-digraph G {
-    splines=line;
-    nodesep=0.1;
-    ranksep=.2;
-    rankdir=TD;
-    margin=0.0;
-    
-    node [margin="0.03" penwidth="0.5" width=.1, height=.1];
-    edge [arrowsize=.4 penwidth="0.3"]
-
-    node3 [margin="0" shape=none label=<<table border="0">
-            
-            <tr>
-                    <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/node3_44366.svg"/></td>
-            </tr>
-            </table>>]
-	node1 [margin="0" shape=none label=<<table border="0">
-            
-            <tr>
-                    <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/node1_44366.svg"/></td>
-            </tr>
-            </table>>]
-	node7 [margin="0" shape=none label=<<table border="0">
-            
-            <tr>
-                    <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/node7_44366.svg"/></td>
-            </tr>
-            </table>>]
-	node10 [margin="0" shape=none label=<<table border="0">
-            
-            <tr>
-                    <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/node10_44366.svg"/></td>
-            </tr>
-            </table>>]
-	node6 [margin="0" shape=none label=<<table border="0">
-            
-            <tr>
-                    <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/node6_44366.svg"/></td>
-            </tr>
-            </table>>]
-	node0 [margin="0" shape=none label=<<table border="0">
-            
-            <tr>
-                    <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/node0_44366.svg"/></td>
-            </tr>
-            </table>>]
-    node3 -> leaf4 [penwidth=0.3 color="#444443" label=<>]
-	node3 -> leaf5 [penwidth=0.3 color="#444443" label=<>]
-	
-            {
-                rank=same;
-                leaf4 -> leaf5 [style=invis]
-            }
-            
-	node1 -> leaf2 [penwidth=0.3 color="#444443" label=<>]
-	node1 -> node3 [penwidth=0.3 color="#444443" label=<>]
-	
-            {
-                rank=same;
-                leaf2 -> node3 [style=invis]
-            }
-            
-	node7 -> leaf8 [penwidth=0.3 color="#444443" label=<>]
-	node7 -> leaf9 [penwidth=0.3 color="#444443" label=<>]
-	
-            {
-                rank=same;
-                leaf8 -> leaf9 [style=invis]
-            }
-            
-	node10 -> leaf11 [penwidth=0.3 color="#444443" label=<>]
-	node10 -> leaf12 [penwidth=0.3 color="#444443" label=<>]
-	
-            {
-                rank=same;
-                leaf11 -> leaf12 [style=invis]
-            }
-            
-	node6 -> node7 [penwidth=0.3 color="#444443" label=<>]
-	node6 -> node10 [penwidth=0.3 color="#444443" label=<>]
-	
-            {
-                rank=same;
-                node7 -> node10 [style=invis]
-            }
-            
-	node0 -> node1 [penwidth=0.3 color="#444443" label=<&le;>]
-	node0 -> node6 [penwidth=0.3 color="#444443" label=<&gt;>]
-	
-            {
-                rank=same;
-                node1 -> node6 [style=invis]
-            }
-            
-    leaf2 [margin="0" shape=box penwidth="0" color="#444443" label=<<table border="0" CELLBORDER="0">
-        
-        <tr>
-                <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/leaf2_44366.svg"/></td>
-        </tr>
-        </table>>]
-	leaf4 [margin="0" shape=box penwidth="0" color="#444443" label=<<table border="0" CELLBORDER="0">
-        
-        <tr>
-                <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/leaf4_44366.svg"/></td>
-        </tr>
-        </table>>]
-	leaf5 [margin="0" shape=box penwidth="0" color="#444443" label=<<table border="0" CELLBORDER="0">
-        
-        <tr>
-                <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/leaf5_44366.svg"/></td>
-        </tr>
-        </table>>]
-	leaf8 [margin="0" shape=box penwidth="0" color="#444443" label=<<table border="0" CELLBORDER="0">
-        
-        <tr>
-                <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/leaf8_44366.svg"/></td>
-        </tr>
-        </table>>]
-	leaf9 [margin="0" shape=box penwidth="0" color="#444443" label=<<table border="0" CELLBORDER="0">
-        
-        <tr>
-                <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/leaf9_44366.svg"/></td>
-        </tr>
-        </table>>]
-	leaf11 [margin="0" shape=box penwidth="0" color="#444443" label=<<table border="0" CELLBORDER="0">
-        
-        <tr>
-                <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/leaf11_44366.svg"/></td>
-        </tr>
-        </table>>]
-	leaf12 [margin="0" shape=box penwidth="0" color="#444443" label=<<table border="0" CELLBORDER="0">
-        
-        <tr>
-                <td><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/leaf12_44366.svg"/></td>
-        </tr>
-        </table>>]
-
-    
-            subgraph cluster_legend {
-                style=invis;
-                legend [penwidth="0" margin="0" shape=box margin="0.03" width=.1, height=.1 label=<
-                
-        <table border="0" cellspacing="0" cellpadding="0">
-            <tr>
-                <td border="0" cellspacing="0" cellpadding="0"><img src="/var/folders/8j/rnk3l07n229c9g2g9z8cr6yh0000gn/T/legend_44366.svg"/></td>
-            </tr>
-        </table>
-        
-                >]
-            }
-            
-    
+digraph Tree {
+node [shape=box, style="filled, rounded", color="black", fontname=helvetica] ;
+edge [fontname=helvetica] ;
+0 [label="node #0\nglucose <= 104.5\nentropy = 0.86\nsamples = 254\nvalue = [72, 182]", fillcolor="#87c4ef"] ;
+1 [label="node #1\nglucose <= 87.5\nentropy = 0.52\nsamples = 77\nvalue = [9, 68]", fillcolor="#53aae8"] ;
+0 -> 1 [labeldistance=2.5, labelangle=45, headlabel="True"] ;
+2 [label="node #2\nentropy = 0.0\nsamples = 19\nvalue = [0, 19]", fillcolor="#399de5"] ;
+1 -> 2 ;
+3 [label="node #3\nblood_pressure <= 83.5\nentropy = 0.623\nsamples = 58\nvalue = [9, 49]", fillcolor="#5dafea"] ;
+1 -> 3 ;
+4 [label="node #4\nentropy = 0.529\nsamples = 50\nvalue = [6, 44]", fillcolor="#54aae9"] ;
+3 -> 4 ;
+5 [label="node #5\nentropy = 0.954\nsamples = 8\nvalue = [3, 5]", fillcolor="#b0d8f5"] ;
+3 -> 5 ;
+6 [label="node #6\nblood_pressure <= 91.0\nentropy = 0.939\nsamples = 177\nvalue = [63, 114]", fillcolor="#a6d3f3"] ;
+0 -> 6 [labeldistance=2.5, labelangle=-45, headlabel="False"] ;
+7 [label="node #7\nglucose <= 143.5\nentropy = 0.91\nsamples = 166\nvalue = [54, 112]", fillcolor="#98ccf2"] ;
+6 -> 7 ;
+8 [label="node #8\nentropy = 0.822\nsamples = 105\nvalue = [27, 78]", fillcolor="#7ebfee"] ;
+7 -> 8 ;
+9 [label="node #9\nentropy = 0.99\nsamples = 61\nvalue = [27, 34]", fillcolor="#d6ebfa"] ;
+7 -> 9 ;
+10 [label="node #10\nglucose <= 141.5\nentropy = 0.684\nsamples = 11\nvalue = [9, 2]", fillcolor="#eb9d65"] ;
+6 -> 10 ;
+11 [label="node #11\nentropy = 0.918\nsamples = 6\nvalue = [4, 2]", fillcolor="#f2c09c"] ;
+10 -> 11 ;
+12 [label="node #12\nentropy = 0.0\nsamples = 5\nvalue = [5, 0]", fillcolor="#e58139"] ;
+10 -> 12 ;
 }
-    
