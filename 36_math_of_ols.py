@@ -1,3 +1,7 @@
+# Desc: OLS from scratch code for post 36-37
+# Author: Michael Berk
+# Date: Winter 2022
+
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -72,29 +76,6 @@ print(m.summary())
 
 assert all(np.round(best_beta(X, Y), 4) == np.round(m.params, 4))
 
-
-
-
-
-
-
-
-
-######### Demo of Convex ###########
-"""
-def ssq(x, y, beta):
-    return np.sum((y - x * beta)**2)
-
-x = np.array([4,3,2])
-y = np.array([3,2.2,1])
-
-betas = np.arange(-2, 2, 0.05)
-errors = [ssq(x, y, b) for b in betas]
-plot_df = pd.DataFrame(dict(betas=betas, ssq=errors))
-px.scatter(plot_df, x='betas', y='ssq', 
-           template='plotly_white', 
-           title='Beta Coefficients vs. SSQ Error').update_traces(marker=dict(color='#B80C09')).show()
-"""
 
 
     
