@@ -11,7 +11,7 @@ from numpy.linalg import inv
 import statsmodels.api as sm
 
 np.random.seed(99)
-show = True 
+show = True # If True, will print/plot all visualizations
 
 # Step 0: Create a dataset
 const = np.repeat(1, 100)
@@ -72,12 +72,65 @@ if show: print(best_betas)
 
 # Step 5: check against statsmodels
 m = sm.OLS(Y, X).fit()
-print(m.summary())
+if show: print(m.summary())
 
 assert all(np.round(best_beta(X, Y), 4) == np.round(m.params, 4))
 
 
 
+#################
+# Demos for intuition
+#################
+
+######### Why is SSQ Convex ###########
+
+def ssq(x, y, beta):
+    return np.sum((y - x * beta)**2)
+
+x = np.array([4,3,2])
+y = np.array([3,2.2,1])
+betas = np.arange(-2, 2, 0.05)
+
+errors = [ssq(x, y, b) for b in betas]
+
+plot_df = pd.DataFrame(dict(betas=betas, ssq=errors))
+if show: px.scatter(plot_df, x='betas', y='ssq',
+           template='plotly_white',
+           title='Beta Coefficients vs. SSQ Error').update_traces(marker=dict(color='#B80C09')).show()
     
+########### Residualizing against independent vars ###########
+# 0. Create baseline model
+X = np.array([age, bamboo]).T
+Y = baby_panda_weight
+
+m_full = sm.OLS(Y, X).fit()
+coefficient_on_age_full = m_full.params[0]
+
+# 1. Residualize age ~ bamboo
+X_temp = bamboo 
+Y_temp = age
+
+m_resid_1 = sm.OLS(Y_temp, X_temp).fit()
+resid_x = m_resid_1.resid
+
+# 2. Residualize baby_panda_age ~ bamboo
+X_temp = bamboo
+Y_temp = baby_panda_weight
+
+m_resid_2 = sm.OLS(Y_temp, X_temp).fit()
+resid_y = m_resid_2.resid
+
+# 3. Fit using residuals
+X_temp = resid_x
+Y_temp = resid_y
+
+m_resid = sm.OLS(Y_temp, X_temp).fit()
+coefficient_on_age_resid = m_resid.params[0]
+
+# 4. Show equality
+if show:
+    print(coefficient_on_age_resid)
+    print(coefficient_on_age_full)
+assert round(coefficient_on_age_resid, 6) == round(coefficient_on_age_full, 6)
 
 
