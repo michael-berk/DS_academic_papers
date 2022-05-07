@@ -64,10 +64,11 @@ if show:
         print(g[:2])
 
 ########## Correct Skew ########
-df_part = df.repartition(8, 'a')
-df_part.groupBy(F.spark_partition_id()).count().show()
+if show:
+    df_part = df.repartition(8, 'a')
+    df_part.groupBy(F.spark_partition_id()).count().show()
 
-df_part = df.withColumn('salt', F.rand())
-df_part.repartition(8, 'salt')
-df_part.groupBy(F.spark_partition_id()).count().show()
+    df_part = df.withColumn('salt', F.rand())
+    df_part = df_part.repartition(8, 'salt')
+    df_part.groupBy(F.spark_partition_id()).count().show()
 
